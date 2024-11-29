@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Tic-Tac-Toe</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>Super Tic-Tac-Toe</h1>
+    <div id="board"></div>
+    <div id="status"></div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const board = document.getElementById('board');
+        const status = document.getElementById('status');
+        let mySymbol;
+        let winner = null;
+
+        const createBoard = () => {
+            for (let gridIndex = 0; gridIndex < 9; gridIndex++) {
+                const grid = document.createElement('div');
+                grid.className = 'grid';
+                for (let cellIndex = 0; cellIndex < 9 ; cellIndex++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.gridIndex = gridIndex;
+                    cell.dataset.cellIndex = cellIndex;
+                    cell.addEventListener('click', () => {
+                        if (!winner) {
+                            socket.emit('makeMove', { gridIndex, cellIndex });
+                        }
+                    });
+                    grid.appendChild(cell);
+                }
+                board.appendChild(grid);
+            }
+        };
+
+        socket.on('assignSymbol', (symbol) => {
+            mySymbol = symbol;
+            status.textContent = `You are Player ${symbol}`;
+        });
+
+        socket.on('playerJoined', (symbol) => {
+            status.textContent = `Player ${symbol} has joined.`;
+        });
+
+        socket.on('updateBoard', (data) => {
+            const { boardState, winner: gameWinner } = data;
+            winner = gameWinner;
+            if (winner) {
+                status.textContent = `Player ${winner} wins!`;
+            } else {
+                status.textContent = `Next turn: ${mySymbol}`;
+            }
+            updateUI(boardState);
+        });
+
+        const updateUI = (boardState) => {
+            const cells = document.querySelectorAll('.cell');
+            cells.forEach((cell, index) => {
+                const gridIndex = Math.floor(index / 9);
+                const cellIndex = index % 9;
+                cell.textContent = boardState[gridIndex][cellIndex] || '';
+            });
+        };
+
+        createBoard();
+    </script>
+</body>
+</html>
